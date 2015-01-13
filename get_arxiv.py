@@ -18,6 +18,7 @@ from sys import stderr, argv, exit
 from xml.dom.minidom import parse
 from xml.sax.saxutils import escape
 from collections import namedtuple
+from os.path import exists
 
 import time
 import urllib
@@ -86,7 +87,7 @@ def pulp_xml_article(a, fp) :
 def pulp_xml_end(fp) :
     print >> fp, "</articles>"
 
-def download(set_name, fp) :
+def download(set_name, description, fp) :
     resume_token = None
 
     pulp_xml_start(fp)
@@ -117,24 +118,43 @@ def download(set_name, fp) :
         #   abstract    - metadata/abstract
         #   venue       - 'arXiv CS'
         #   url         - "http://arxiv.org/abs/" + metadata/id
+        articles = []
+        error = False
+
         for record in dom.getElementsByTagName("record") :
-            metadata = record.getElementsByTagName("metadata")[0]
+            try :
+                metadata = record.getElementsByTagName("metadata")[0]
 
-            id          = grab(metadata, "id")
-            title       = grab(metadata, "title")
-            abstract    = grab(metadata, "abstract")
+                id          = grab(metadata, "id")
+                title       = grab(metadata, "title")
+                abstract    = grab(metadata, "abstract")
     
-            venue = "arXiv CS"
-            url = "http://arxiv.org/abs/" + id
+                venue = "arXiv %s" % description
+                url = "http://arxiv.org/abs/" + id
 
-            authors = []
+                authors = []
 
-            for author in metadata.getElementsByTagName("authors")[0].getElementsByTagName("author") :
-                authors.append(grab(author, "forenames") + ' ' + grab(author, "keyname"))
+                for author in metadata.getElementsByTagName("authors")[0].getElementsByTagName("author") :
+                    authors.append(grab(author, "forenames") + ' ' + grab(author, "keyname"))
 
-            author = ", ".join(authors)
+                author = ", ".join(authors)
+                articles.append(Article(id, title, author, abstract, venue, url), fp)
+            
+            except Exception, e:
+                print >> stderr, str(e)
+                error = True
+                break
 
-            pulp_xml_article(Article(id, title, author, abstract, venue, url), fp)
+        # I have seen metadata = record.getElementsByTagName("metadata")[0] not
+        # contain anything, so maybe retry?
+        if error :
+            print >> stderr, "***********************************"
+            print >> stderr, "*            RETRYING             *"
+            print >> stderr, "***********************************"
+            continue
+
+        for a in articles :
+            pulp_xml_article(a, fp)
 
         # <resumptionToken cursor="0" completeListSize="78129">697539|1001</resumptionToken>
         resume_token = grab(dom, "resumptionToken")
@@ -185,11 +205,14 @@ def main() :
 
         better_name = '_'.join(better_name.split())
 
+        if not exists(better_name + '.xml') :
+            print >> stderr, "Downloading %s (%s) to %s ..." % (name, spec, better_name + '.xml')
+        else :
+            print >> stderr, "Skipping %s ..." % name
+            continue
 
-        print >> stderr, "Downloading %s (%s) to %s ..." % (name, spec, better_name + '.xml')
-        
         with open(better_name + '.xml', 'w') as f :
-            download(spec, f)
+            download(spec, name, f)
 
     return 0
 
