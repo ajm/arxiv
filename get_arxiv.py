@@ -23,6 +23,7 @@ from os.path import exists
 import time
 import urllib
 import urllib2
+import socket
 
 
 arxiv_url = 'http://export.arxiv.org/oai2?'
@@ -108,6 +109,17 @@ def download(set_name, description, fp) :
                 print >> stderr, "i don't know what to do..."
                 exit(1)
 
+        except urllib2.URLError, ue :
+            print >> stderr, str(ue)
+            time.sleep(20)
+            continue
+
+        except socket.error, se :
+            print >> stderr, str(se)
+            time.sleep(20)
+            continue
+
+
         dom = parse(f)
 
         # articles
@@ -138,19 +150,18 @@ def download(set_name, description, fp) :
                     authors.append(grab(author, "forenames") + ' ' + grab(author, "keyname"))
 
                 author = ", ".join(authors)
-                articles.append(Article(id, title, author, abstract, venue, url), fp)
+                articles.append(Article(id, title, author, abstract, venue, url))
             
             except Exception, e:
                 print >> stderr, str(e)
-                error = True
-                break
+                print >> stderr, record.toprettyxml()
+                #error = True
+                #break
 
         # I have seen metadata = record.getElementsByTagName("metadata")[0] not
         # contain anything, so maybe retry?
         if error :
-            print >> stderr, "***********************************"
-            print >> stderr, "*            RETRYING             *"
-            print >> stderr, "***********************************"
+            print >> stderr, "retrying due to error..."
             continue
 
         for a in articles :
