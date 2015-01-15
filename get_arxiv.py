@@ -130,6 +130,8 @@ def download(set_name, description, fp) :
         #   abstract    - metadata/abstract
         #   venue       - 'arXiv CS'
         #   url         - "http://arxiv.org/abs/" + metadata/id
+        #
+        # there is also this tag that I don't use but might be useful: <categories>math.CO cs.CG</categories>
         articles = []
         error = False
 
