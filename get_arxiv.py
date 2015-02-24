@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with get_arxiv.py.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import stderr, argv, exit
+from sys import stderr, argv, exit, stdout
 
 from xml.dom.minidom import parse
 from xml.sax.saxutils import escape
@@ -28,7 +28,7 @@ import socket
 
 arxiv_url = 'http://export.arxiv.org/oai2?'
 
-Article = namedtuple('Article', ['id', 'title', 'author', 'abstract', 'venue', 'url'])
+Article = namedtuple('Article', ['id', 'title', 'author', 'abstract', 'venue', 'url', 'categories'])
 
 def _build_url(params) :
     global arxiv_url
@@ -83,7 +83,8 @@ def pulp_xml_article(a, fp) :
     <abstract>%s</abstract>
     <venue>%s</venue>
     <url>%s</url>
-</article>""" % (id_counter, a.title, a.author, a.abstract, a.venue, a.url)
+    <categories>%s</categories>
+</article>""" % (id_counter, a.title, a.author, a.abstract, a.venue, a.url, a.categories)
 
 def pulp_xml_end(fp) :
     print >> fp, "</articles>"
@@ -142,9 +143,11 @@ def download(set_name, description, fp) :
                 id          = grab(metadata, "id")
                 title       = grab(metadata, "title")
                 abstract    = grab(metadata, "abstract")
-    
+                
                 venue = "arXiv %s" % description
                 url = "http://arxiv.org/abs/" + id
+
+                categories = ", ".join(grab(metadata, "categories").split())
 
                 authors = []
 
@@ -152,7 +155,7 @@ def download(set_name, description, fp) :
                     authors.append(grab(author, "forenames") + ' ' + grab(author, "keyname"))
 
                 author = ", ".join(authors)
-                articles.append(Article(id, title, author, abstract, venue, url))
+                articles.append(Article(id, title, author, abstract, venue, url, categories))
             
             except Exception, e:
                 print >> stderr, str(e)
@@ -208,6 +211,9 @@ def list_sets() :
     return sets
 
 def main() :
+    download('cs', 'Computer Science', stdout)
+    return 0
+
     sets = list_sets()
 
     for name,spec in sets.items() :
