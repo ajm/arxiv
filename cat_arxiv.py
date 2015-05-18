@@ -70,8 +70,8 @@ id_counter = 0
 def download(set_name, description, fp) :
     resume_token = None
 
-    print '<?xml version="1.0" encoding="utf-8"?>'
-    print "<records>"
+    print >> fp, '<?xml version="1.0" encoding="utf-8"?>'
+    print >> fp, "<records>"
 
     while True :
         try :
@@ -104,7 +104,7 @@ def download(set_name, description, fp) :
 
 
         for record in dom.getElementsByTagName("record") :
-            print record.toxml("utf-8") 
+            print >> fp, record.toxml("utf-8") 
 
 
         # <resumptionToken cursor="0" completeListSize="78129">697539|1001</resumptionToken>
@@ -117,7 +117,7 @@ def download(set_name, description, fp) :
         print >> stderr, "sleeping..."
         time.sleep(20)
 
-    print "</records>"
+    print >> fp, "</records>"
 
 def list_sets() :
     global arxiv_url
@@ -146,8 +146,8 @@ def list_sets() :
     return sets
 
 def main() :
-    download('cs', 'Computer Science', stdout)
-    return 0
+    #download('cs', 'Computer Science', stdout)
+    #return 0
 
     sets = list_sets()
 
